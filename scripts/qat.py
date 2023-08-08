@@ -100,6 +100,23 @@ def create_custom_train_dataloader(datadir, train_txt_filename="train.txt", batc
         augment=True, hyp=hyp, rect=rect, cache=False, stride=32, pad=0, image_weights=image_weights)[0]
     return loader
 
+def create_custom_val_dataloader(datadir, val_txt_filename="val.txt", batch_size=4, keep_images=None, image_size=640, single_cls=False, rect=True, image_weights=False):
+
+    loader = create_dataloader(
+        f"{datadir}/"+val_txt_filename, 
+        imgsz=image_size, 
+        batch_size=batch_size, 
+        opt=collections.namedtuple("Opt", "single_cls")(single_cls),
+        augment=False, hyp=None, rect=rect, cache=False,stride=32,pad=0.5, image_weights=image_weights)[0]
+
+    def subclass_len(self):
+        if keep_images is not None:
+            return keep_images
+        return len(self.img_files)
+
+    loader.dataset.__len__ = subclass_len
+    return loader
+
 # Function to evaluate the performance of a given model on custom data
 def evaluate_custom(model, dataloader, using_cocotools = False, save_dir=".", conf_thres=0.001, iou_thres=0.65):
     if save_dir and os.path.dirname(save_dir) != "":
@@ -345,7 +362,7 @@ if __name__ == "__main__":
     exp    = subps.add_parser("export", help="Export weight to onnx file")
     exp.add_argument("weight", type=str, default="yolov7.pt", help="export pt file")
     exp.add_argument("--save", type=str, required=False, help="export onnx file")
-    exp.add_argument("--size", type=int, default=640, help="export input size")
+    exp.add_argument("--size", type=int, default=1056, help="export input size")
     exp.add_argument("--dynamic", action="store_true", help="export dynamic batch")
 
     qat = subps.add_parser("quantize", help="PTQ/QAT finetune ...")
@@ -354,7 +371,7 @@ if __name__ == "__main__":
     qat.add_argument("--datadir", type=str, default="/datav/dataset/coco", help="data directory")
     qat.add_argument("--train-file", type=str, default="train.txt", help="train set txt file name (eg train.txt)")
     qat.add_argument("--val-file", type=str, default="val.txt", help="validation set txt file name (eg val.txt)")
-    qat.add_argument("--image-size", type=int, default=640, help="image size")
+    qat.add_argument("--image-size", type=int, default=1056, help="image size")
     qat.add_argument("--single-cls", action="store_true", help="single class")
     qat.add_argument("--rect", action="store_true", help="Rectangular training")
     qat.add_argument("--img-wts", action="store_true", help="Image weights")
@@ -385,7 +402,7 @@ if __name__ == "__main__":
     init_seeds(57)  # Initialize seeds
 
     # Execute the corresponding function based on the parsed command
-
+    print("\n Arguments: \n", args)
     if args.cmd == "export":
         # If the command is 'export', the script calls the 'cmd_export' function.
         # The function is passed parameters for the weights file, the output file to save to, the image size, and whether to export dynamically.
@@ -398,7 +415,7 @@ if __name__ == "__main__":
         # Quantization-Aware Training (QAT) to the model.
         # The purpose of PTQ and QAT is to reduce the computational resources required by the model, which can be critical for deploying models to devices
         # with limited resources, such as mobile devices.
-        print(args)
+
         cmd_quantize(
             weight=args.weight, custom=args.custom, datadir=args.datadir, train_txt_filename=args.train_file, 
             val_txt_filename=args.val_file, image_size=args.image_size, single_cls=args.single_cls,

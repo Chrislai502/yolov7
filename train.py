@@ -523,8 +523,10 @@ def train(hyp, opt, device, tb_writer=None):
     torch.cuda.empty_cache()
     return results
 
-
+# This line ensures the script is being run directly, not being imported as a module
 if __name__ == '__main__':
+    # argparse.ArgumentParser() creates a new ArgumentParser object
+    # This object will hold all information necessary to parse the command-line arguments from sys.argv.
     parser = argparse.ArgumentParser()
     parser.add_argument('--weights', type=str, default='yolo7.pt', help='initial weights path')
     parser.add_argument('--cfg', type=str, default='', help='model.yaml path')
@@ -532,7 +534,7 @@ if __name__ == '__main__':
     parser.add_argument('--hyp', type=str, default='data/hyp.scratch.p5.yaml', help='hyperparameters path')
     parser.add_argument('--epochs', type=int, default=300)
     parser.add_argument('--batch-size', type=int, default=16, help='total batch size for all GPUs')
-    parser.add_argument('--img-size', nargs='+', type=int, default=[640, 640], help='[train, test] image sizes')
+    parser.add_argument('--img-size', nargs='+', type=int, default=[1056, 1056], help='[train, test] image sizes')
     parser.add_argument('--rect', action='store_true', help='rectangular training')
     parser.add_argument('--resume', nargs='?', const=True, default=False, help='resume most recent training')
     parser.add_argument('--nosave', action='store_true', help='only save final checkpoint')
@@ -565,6 +567,7 @@ if __name__ == '__main__':
     opt = parser.parse_args()
 
     # Set DDP variables
+    # Check if the environment variable 'WORLD_SIZE' is set, if yes then convert it to int, else set world_size as 1
     opt.world_size = int(os.environ['WORLD_SIZE']) if 'WORLD_SIZE' in os.environ else 1
     opt.global_rank = int(os.environ['RANK']) if 'RANK' in os.environ else -1
     set_logging(opt.global_rank)
@@ -605,9 +608,10 @@ if __name__ == '__main__':
     with open(opt.hyp) as f:
         hyp = yaml.load(f, Loader=yaml.SafeLoader)  # load hyps
 
-    # Train
+    # Train or evolve based on the options provided
     logger.info(opt)
     if not opt.evolve:
+        # Initialize loggers and start training
         tb_writer = None  # init loggers
         if opt.global_rank in [-1, 0]:
             prefix = colorstr('tensorboard: ')
@@ -616,8 +620,9 @@ if __name__ == '__main__':
         train(hyp, opt, device, tb_writer)
 
     # Evolve hyperparameters (optional)
-    else:
-        # Hyperparameter evolution metadata (mutation scale 0-1, lower_limit, upper_limit)
+    else: 
+        # Evolve hyperparameters if the evolve flag is set.
+        # Define metadata for evolution (mutation scale 0-1, lower_limit, upper_limit)
         meta = {'lr0': (1, 1e-5, 1e-1),  # initial learning rate (SGD=1E-2, Adam=1E-3)
                 'lrf': (1, 0.01, 1.0),  # final OneCycleLR learning rate (lr0 * lrf)
                 'momentum': (0.3, 0.6, 0.98),  # SGD momentum/Adam beta1

@@ -141,26 +141,42 @@ def quantization_ignore_match(ignore_policy : Union[str, List[str], Callable], p
 
 # Function to replace modules in the model with their quantized equivalents
 def replace_to_quantization_module(model : torch.nn.Module, ignore_policy : Union[str, List[str], Callable] = None):
+    
+    # Create an empty dictionary to hold original modules and their corresponding quantized modules
     module_dict = {}
+    # Loop over the entries in the _DEFAULT_QUANT_MAP dictionary, which contains mapping from original module to its quantized version
     for entry in quant_modules._DEFAULT_QUANT_MAP:
+        # Get the original module
         module = getattr(entry.orig_mod, entry.mod_name)
+        # Map the ID of the original module to the quantized module in module_dict
         module_dict[id(module)] = entry.replace_mod
 
+    # Define a recursive function to go through all the modules in the model
     def recursive_and_replace_module(module, prefix=""):
+        # Loop over the submodules of the current module
         for name in module._modules:
+            # Get the current submodule
             submodule = module._modules[name]
+            # Get the path to the current submodule
             path      = name if prefix == "" else prefix + "." + name
+            # Call the recursive function on the current submodule
             recursive_and_replace_module(submodule, path)
 
+            # Get the ID of the type of the current submodule
             submodule_id = id(type(submodule))
+            # Check if the current submodule should be replaced by a quantized version
             if submodule_id in module_dict:
+                # Check if the current submodule should be ignored based on the ignore_policy
                 ignored = quantization_ignore_match(ignore_policy, path)
+                # If the submodule should be ignored, print a message and continue with the next submodule
                 if ignored:
                     print(f"Quantization: {path} has ignored.")
                     continue
 
+                # If the submodule should not be ignored, replace it with its quantized version
                 module._modules[name] = transfer_torch_to_quantization(submodule, module_dict[submodule_id])
 
+    # Call the recursive function on the top-level model
     recursive_and_replace_module(model)
 
 # Function to retrieve attribute value with the given attribute path
