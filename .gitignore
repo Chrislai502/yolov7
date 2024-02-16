@@ -1,5 +1,5 @@
 # Repo-specific GitIgnore ----------------------------------------------------------------------------------------------
-*.jpg
+
 *.jpeg
 *.png
 *.bmp
@@ -24,7 +24,7 @@
 !cfg/yolov3*.cfg
 
 storage.googleapis.com
-runs/*
+# runs/*
 data/*
 custom_dataset/*
 data/images/*
@@ -55,7 +55,7 @@ val2017.zip
 
 # Neural Network weights -----------------------------------------------------------------------------------------------
 *.weights
-*.pt
+
 *.pb
 *.onnx
 *.engine
